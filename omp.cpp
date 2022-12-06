@@ -1,8 +1,5 @@
 #include<bits/stdc++.h>
 #include<omp.h>
-// #include <tbb/tbb.h>
-// #include <tbb/blocked_range.h>
-// #include <tbb/parallel_for.h>
 
 using namespace std;
 
@@ -202,27 +199,26 @@ void BKPivot(unordered_set<int> &R, unordered_set<int> &P, unordered_set<int> &X
 }
 
 void FindMaximalCliques(Graph *G){
-    // unordered_set<int> R;
-    // unordered_set<int> P;
-    // unordered_set<int> X;
-    // for(int i = 1; i <= (G -> n); ++i){
-    //     P.insert(i);
-    // }
-    // BKPivot(R, P, X, G);
-
-    freopen("3.txt","r",stdin);
-    int x;
-    vector<int> tmp;
-    while(scanf("%d", &x) != EOF){
-        if(x == -1){
-            maximal_cliques.emplace_back(tmp);
-            tmp.clear();
-        }
-        else{
-            tmp.push_back(G -> mp[x]);
-        }
+    unordered_set<int> R;
+    unordered_set<int> P;
+    unordered_set<int> X;
+    for(int i = 1; i <= (G -> n); ++i){
+        P.insert(i);
     }
-    fclose(stdin);
+    BKPivot(R, P, X, G);
+
+//     int x;
+//     vector<int> tmp;
+//     while(scanf("%d", &x) != EOF){
+//         if(x == -1){
+//             maximal_cliques.emplace_back(tmp);
+//             tmp.clear();
+//         }
+//         else{
+//             tmp.push_back(G -> mp[x]);
+//         }
+//     }
+//     fclose(stdin);
 
     for(auto &clique: maximal_cliques){
         if(clique.size() > Kmax){
@@ -294,7 +290,6 @@ inline int Overlap(const vector<int> &A, const vector<int> &B){
 }
 
 void COSpoc_work(int q, vector<UnionFind*> &F){
-    // printf("Thread %d\n", q);
     for(int k = 2; k <= Kmax; ++k){
         F.emplace_back(new UnionFind(rows_to_consider[k - 2]));
     }
@@ -324,9 +319,6 @@ vector<UnionFind *> COSpoc(){
         int q = omp_get_thread_num();
         COSpoc_work(q, F[q]);
     }
-    // for(int q = 0; q < NUMTHEADS; ++q){
-    //     COSpoc_work(q, F[q]);
-    // }
 
     for(int k = 2; k <= Kmax; ++k){
         for(int q = 1; q < NUMTHEADS; ++q){
@@ -372,7 +364,6 @@ inline int SlideCalc(double s, double w, double n){
 }
 
 void COS_calc(int q, int s, int e){
-    // printf("Thread %d\n", q);
     int n = all_cliques.size();
     for(int i = s + q; i < e; i += NUMTHEADS){
         for(int j = i + 1; j < n; ++j){
@@ -383,7 +374,6 @@ void COS_calc(int q, int s, int e){
 }
 
 void COS_proc(int q, const vector<UnionFind *> &F_global, int s, int e){
-    // printf("Thread %d\n", q);
     int n = all_cliques.size();
     UnionFind * F_q = new UnionFind(n);
     for(int k = Kmax; k >= 2; --k){
@@ -398,9 +388,7 @@ void COS_proc(int q, const vector<UnionFind *> &F_global, int s, int e){
         }
         #pragma omp critical
         {
-            // cerr << q << " begin " << k << endl;
             CONNECT_ME(F_global[k - 2], F_q);
-            // cerr << q << " finish " << k << endl;
         }
     }
     delete F_q;
@@ -420,19 +408,16 @@ vector<UnionFind *> COS(int limit){
     Buff.resize(limit);
     while(s < n - 1){
         e = SlideCalc(s, limit, n);
-        // cerr << s << " " << e << endl;
         #pragma omp parallel num_threads(NUMTHEADS) 
         {
             int q = omp_get_thread_num();
             COS_calc(q, s, e);
         }
-        // cerr << "ok1" << endl;
         #pragma omp parallel num_threads(NUMTHEADS) 
         {
             int q = omp_get_thread_num();
             COS_proc(q, F_global, s, e);
         }
-        // cerr << "ok2" << endl;
         s = e;
         base = (long long)(2 * n - s - 1) * s / 2;
         // cerr << 100.0 * base / tot  << "%" << endl;
@@ -447,35 +432,32 @@ void Extract(const vector<UnionFind *> &communities, Graph *G){
             tmp[communities[k - 2] -> Find(i)].push_back(i);
         }
         printf("%d-clique-communities: %d\n", k, tmp.size());
-        // vector<vector<int> > k_clique_communities;
-        // for(auto &node: tmp){
-        //     set<int> S;
-        //     for(auto &id: node.second){
-        //         for(auto &x: *all_cliques[id]){
-        //             S.insert(x);
-        //         }
-        //     }
-        //     vector<int>community;
-        //     for(auto &x: S){
-        //         community.push_back(G -> ID[x]);
-        //         // printf("%d ", G -> ID[x]);
-        //     }
-        //     k_clique_communities.emplace_back(community);
-        //     // puts("");
-        // }
-        // sort(k_clique_communities.begin(), k_clique_communities.end());
-        // for(auto &community : k_clique_communities){
-        //     for(auto &x: community){
-        //         printf("%d ", x);
-        //     }
-        //     puts("");
-        // }
+        vector<vector<int> > k_clique_communities;
+        for(auto &node: tmp){
+            set<int> S;
+            for(auto &id: node.second){
+                for(auto &x: *all_cliques[id]){
+                    S.insert(x);
+                }
+            }
+            vector<int>community;
+            for(auto &x: S){
+                community.push_back(G -> ID[x]);
+            }
+            k_clique_communities.emplace_back(community);
+        }
+        sort(k_clique_communities.begin(), k_clique_communities.end());
+        for(auto &community : k_clique_communities){
+            for(auto &x: community){
+                printf("%d ", x);
+            }
+            puts("");
+        }
         delete communities[k - 2];
     }
 }
 
 int main(){
-    // freopen(".out","w",stdout);
     Graph G; G.init();
     FindMaximalCliques(&G);
     auto st = omp_get_wtime();
