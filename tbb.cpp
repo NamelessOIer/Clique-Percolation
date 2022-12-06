@@ -294,7 +294,6 @@ inline int Overlap(const vector<int> &A, const vector<int> &B){
 
 vector<UnionFind *> F[NUMTHEADS];
 void COSpoc_work(int q){
-    // printf("Thread %d\n", q);
     for(int k = 2; k <= Kmax; ++k){
         F[q].emplace_back(new UnionFind(rows_to_consider[k - 2]));
     }
@@ -392,9 +391,7 @@ void COS_proc(int q, const vector<UnionFind *> &F_global, int s, int e){
         }
         {
             my_mutex_t::scoped_lock lock(my_mutex[k - 2]);
-            // cerr << q << " begin " << k << endl;
             CONNECT_ME(F_global[k - 2], F_q);
-            // cerr << q << " finish " << k << endl;
         }
     }
     delete F_q;
@@ -415,7 +412,6 @@ vector<UnionFind *> COS(int limit){
     while(s < n - 1){
         e = SlideCalc(s, limit, n);
         tbb::parallel_for(0, NUMTHEADS, 1, [ = ](int i){ 
-            // int q = tbb::task_arena::current_thread_index();
             COS_calc(i, s, e);
         });
 
@@ -447,10 +443,8 @@ void Extract(const vector<UnionFind *> &communities, Graph *G){
             vector<int>community;
             for(auto &x: S){
                 community.push_back(G -> ID[x]);
-                // printf("%d ", G -> ID[x]);
             }
             k_clique_communities.emplace_back(community);
-            // puts("");
         }
         sort(k_clique_communities.begin(), k_clique_communities.end());
         for(auto &community : k_clique_communities){
