@@ -1,8 +1,6 @@
 #include<bits/stdc++.h>
-// #include<omp.h>
 #include <tbb/tbb.h>
 #include <tbb/parallel_for.h>
-// #include <tbb/blocked_range.h>
 
 using namespace std;
 
@@ -321,18 +319,8 @@ void CONNECT_ME(UnionFind *A, UnionFind *B){
 vector<UnionFind *> COSpoc(){
 
     tbb::parallel_for(0, NUMTHEADS, 1, [=](int i){ 
-        // int q = tbb::task_arena::current_thread_index();
         COSpoc_work(i);
     });
-    // #pragma omp parallel num_threads(NUMTHEADS) 
-    // {
-    //     int q = omp_get_thread_num();
-    //     COSpoc_work(q, F[q]);
-    // }
-    // for(int q = 0; q < NUMTHEADS; ++q){
-    //     COSpoc_work(q, F[q]);
-    // }
-
     for(int k = 2; k <= Kmax; ++k){
         for(int q = 1; q < NUMTHEADS; ++q){
             CONNECT_ME(F[0][k - 2], F[q][k - 2]);
@@ -377,7 +365,6 @@ inline int SlideCalc(double s, double w, double n){
 }
 
 void COS_calc(int q, int s, int e){
-    // printf("Thread %d\n", q);
     int n = all_cliques.size();
     for(int i = s + q; i < e; i += NUMTHEADS){
         for(int j = i + 1; j < n; ++j){
@@ -390,7 +377,6 @@ void COS_calc(int q, int s, int e){
 using my_mutex_t = tbb::spin_mutex;
 
 void COS_proc(int q, const vector<UnionFind *> &F_global, int s, int e){
-    // printf("Thread %d\n", q);
     int n = all_cliques.size();
     UnionFind * F_q = new UnionFind(n);
     static vector<my_mutex_t> my_mutex(Kmax - 1);
@@ -404,7 +390,6 @@ void COS_proc(int q, const vector<UnionFind *> &F_global, int s, int e){
                 }
             }
         }
-        // #pragma omp critical
         {
             my_mutex_t::scoped_lock lock(my_mutex[k - 2]);
             // cerr << q << " begin " << k << endl;
@@ -429,28 +414,14 @@ vector<UnionFind *> COS(int limit){
     Buff.resize(limit);
     while(s < n - 1){
         e = SlideCalc(s, limit, n);
-        // cerr << s << " " << e << endl;
         tbb::parallel_for(0, NUMTHEADS, 1, [ = ](int i){ 
             // int q = tbb::task_arena::current_thread_index();
             COS_calc(i, s, e);
         });
-        // #pragma omp parallel num_threads(NUMTHEADS) 
-        // {
-        //     int q = omp_get_thread_num();
-        //     COS_calc(q, s, e);
-        // }
-        // cerr << "ok1" << endl;
 
         tbb::parallel_for(0, NUMTHEADS, 1, [ = ](int i){ 
-            // int q = tbb::task_arena::current_thread_index();
             COS_proc(i ,F_global, s, e);
         });
-        // #pragma omp parallel num_threads(NUMTHEADS) 
-        // {
-        //     int q = omp_get_thread_num();
-        //     COS_proc(q, F_global, s, e);
-        // }
-        // cerr << "ok2" << endl;
         s = e;
         base = (long long)(2 * n - s - 1) * s / 2;
         // cerr << 100.0 * base / tot  << "%" << endl;
@@ -465,35 +436,34 @@ void Extract(const vector<UnionFind *> &communities, Graph *G){
             tmp[communities[k - 2] -> Find(i)].push_back(i);
         }
         printf("%d-clique-communities: %d\n", k, tmp.size());
-        // vector<vector<int> > k_clique_communities;
-        // for(auto &node: tmp){
-        //     set<int> S;
-        //     for(auto &id: node.second){
-        //         for(auto &x: *all_cliques[id]){
-        //             S.insert(x);
-        //         }
-        //     }
-        //     vector<int>community;
-        //     for(auto &x: S){
-        //         community.push_back(G -> ID[x]);
-        //         // printf("%d ", G -> ID[x]);
-        //     }
-        //     k_clique_communities.emplace_back(community);
-        //     // puts("");
-        // }
-        // sort(k_clique_communities.begin(), k_clique_communities.end());
-        // for(auto &community : k_clique_communities){
-        //     for(auto &x: community){
-        //         printf("%d ", x);
-        //     }
-        //     puts("");
-        // }
+        vector<vector<int> > k_clique_communities;
+        for(auto &node: tmp){
+            set<int> S;
+            for(auto &id: node.second){
+                for(auto &x: *all_cliques[id]){
+                    S.insert(x);
+                }
+            }
+            vector<int>community;
+            for(auto &x: S){
+                community.push_back(G -> ID[x]);
+                // printf("%d ", G -> ID[x]);
+            }
+            k_clique_communities.emplace_back(community);
+            // puts("");
+        }
+        sort(k_clique_communities.begin(), k_clique_communities.end());
+        for(auto &community : k_clique_communities){
+            for(auto &x: community){
+                printf("%d ", x);
+            }
+            puts("");
+        }
         delete communities[k - 2];
     }
 }
 
 int main(){
-    // freopen(".out","w",stdout);
     Graph G; G.init();
     FindMaximalCliques(&G);
     auto st = tbb::tick_count::now();
